@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-/* 
+/*
  * ------------------------------------------------------------
  * File: cab202_sprites.h
  *
@@ -23,20 +23,20 @@
  *		x, y:	The location of the sprite, represented as double to allow
  *				fractional positioning.
  *
- *		width:	The width of the sprite. This must be less than or equal to 
+ *		width:	The width of the sprite. This must be less than or equal to
  *				SS_WIDTH.
  *
- *		height:	The height of the sprite. This must be less than or equal to 
+ *		height:	The height of the sprite. This must be less than or equal to
  *				SS_HEIGHT.
  *
- *		dx, dy: A pair of floating point values which store a displacement 
+ *		dx, dy: A pair of floating point values which store a displacement
  *				vector. Each time the sprite location is updated by sprite_step
- *				these values are added to the sprite's current x and y 
+ *				these values are added to the sprite's current x and y
  *				coordinates.
  *
  *		is_visible: Current visibility of the sprite. true == visible; false == invisible.
  *
- *		bitmap: an array of characters that represents the image. ' ' (space) is 
+ *		bitmap: an array of characters that represents the image. ' ' (space) is
  *				treated as transparent.
  *
  *		cookie: An arbitrary pointer which can be used to attach additional application-
@@ -52,8 +52,8 @@ typedef struct Sprite {
 	void * cookie;
 } Sprite;
 
-/* 
- *	Data type to uniquely identify all registered sprites. 
+/*
+ *	Data type to uniquely identify all registered sprites.
  */
 
 typedef Sprite * sprite_id;
@@ -69,8 +69,8 @@ typedef Sprite * sprite_id;
  *		width, height: The dimensions of the sprite.
  *
  *		bitmap:	The characters to show. A dynamically allocated copy of the bitmap
- *				is created. If you alter the bitmap pointer later, care must be taken 
- *				to ensure that memory resources are preserved, restored and deallocated 
+ *				is created. If you alter the bitmap pointer later, care must be taken
+ *				to ensure that memory resources are preserved, restored and deallocated
  *				correctly.
  *
  *	Output:
@@ -121,21 +121,21 @@ void sprite_destroy( sprite_id sprite );
 void sprite_draw( sprite_id id );
 
 /*
- *	Sets the stored displacement vector of a 
+ *	Sets the stored displacement vector of a
  *	designated sprite to a new value.
  *
  *	Input:
  *		sprite: the ID of a sprite.
- *		dx, dy: the x- and y- components of the 
+ *		dx, dy: the x- and y- components of the
  *					new displacement vector.
  */
 void sprite_turn_to( sprite_id sprite, double dx, double dy );
 
 /*
- *	Updates the internally stored displacement vector. This is the step 
+ *	Updates the internally stored displacement vector. This is the step
  *	that is taken when the sprite moves forward or backward.
  *
- *	The new direction is relative to the previous direction. If the old 
+ *	The new direction is relative to the previous direction. If the old
  *	direction is 0,0 then the new one will also be 0,0.
  *
  *	Input:
@@ -208,7 +208,7 @@ bool sprite_move( sprite_id sprite, double dx, double dy );
 int sprite_width( sprite_id sprite );
 
 /*
- *	Gets the height of the sprite bitmap. 
+ *	Gets the height of the sprite bitmap.
  *
  *	Input:
  *		sprite: The ID of a sprite.
@@ -296,7 +296,7 @@ bool sprite_hide( sprite_id sprite );
 bool sprite_visible( sprite_id sprite );
 
 /*
- *	Updates the pattern of characters displayed when the designated 
+ *	Updates the pattern of characters displayed when the designated
  *	sprite is rendered.
  *
  *	Input:
@@ -316,7 +316,7 @@ void sprite_set_image( sprite_id sprite, char image [] );
  *		b - The address of another sprite to be compared.
  *
  *	Output:	Returns true if and only if all members of the sprite
- *			are equal. Note that sprite cookies are compared by a 
+ *			are equal. Note that sprite cookies are compared by a
  *			simple pointer equality test.
  */
 bool sprites_equal( const sprite_id a, const sprite_id b );
