@@ -16,11 +16,18 @@
 #define MONSTER_WIDTH (5)
 #define MONSTER_HEIGHT (5)
 //walking speed should be calibrated so that it takes ca. 5 sec from left to right
-#define WALKING_SPEED (2)
-#define RUNNING_SPEED (4)
+#define WALKING_SPEED (1)
+#define RUNNING_SPEED (2)
 //roughly 5 or 6 times its own height, overall time is around 1.5-2.0 seconds
-#define INITIAL_VERTICAL_SPEED()
-#define GRAVITATIONAL_ACCELERATION()
+#define INITIAL_VERTICAL_SPEED (5)
+#define GRAVITATIONAL_ACCELERATION (3)
+
+
+float speed_x = 0;
+float speed_y = 0;
+
+int avatar_initial_position_y = 0;
+int avatar_initial_position_x = 0;
 
 
 //Game state
@@ -35,8 +42,6 @@ int lives = 10;
 int level = 1;
 int score = 0;
 
-double speed_x = 0;
-double speed_y = 0;
 
 
 
@@ -72,6 +77,9 @@ char* monster_image =
 /**/	" Z   "
 /**/	"ZZZZZ";
 
+char* debug_msg_image =
+"this is a debug message";
+
 
 
 
@@ -85,6 +93,17 @@ sprite_id monster;
 sprite_id treasure;
 sprite_id exit_door;
 sprite_id key;
+
+void debug_message(){
+  int w = screen_width(), h = screen_height(), ch = '*';
+  clear_screen();
+  int message_width = strlen(debug_msg_image) / 2;
+  sprite_id debug_msg = sprite_create( ( w - message_width ) / 2, ( h - 2 ) / 2, message_width, 2, debug_msg_image);
+  sprite_draw(debug_msg);
+  show_screen();
+  wait_char();
+  return;
+}
 
 void setup(void){
 
@@ -100,6 +119,8 @@ void setup(void){
 int aw = AVATAR_WIDTH, ah = AVATAR_HEIGHT;
 int ax = aw/2+1;
 int ay = (screen_height()-ah-1);
+avatar_initial_position_y = ay;
+avatar_initial_position_x = ax;
 avatar = sprite_create(ax,ay,aw,ah,avatar_image);
 
 sprite_draw(avatar);
@@ -171,6 +192,10 @@ bool is_collided(sprite_id s1, sprite_id s2){
 }
 
 
+
+
+
+
 void process(){
   int w = screen_width(), h = screen_height(), ch = '*';
 
@@ -180,25 +205,85 @@ void process(){
 	// (y) Test for end of game.
 	if ( key == 'q' ) {
 		clear_screen();
-		int message_width = strlen(msg_image) / 2;
-		sprite_id msg = sprite_create( ( w - message_width ) / 2, ( h - 2 ) / 2, message_width, 2, msg_image);
-		sprite_draw(msg);
-		show_screen();
-		game_over = true;
-		wait_char();
-		return;
+		// int message_width = strlen(msg_image) / 2;
+		// sprite_id msg = sprite_create( ( w - message_width ) / 2, ( h - 2 ) / 2, message_width, 2, msg_image);
+		// sprite_draw(msg);
+		// show_screen();
+		// game_over = true;
+		// wait_char();
+		// return;
+    debug_message();
 	}
 
+  //current position of avatar
   int ax = round(sprite_x(avatar));
   int ay = round(sprite_y(avatar));
 
-  // (h) Move hero left according to specification.
-	if ( key == 'a' && ax > 1 ) sprite_move( avatar, -1, 0 );
+  int next_position_x = ax + speed_x;
+  int next_position_y = ay + speed_y;
 
-	// (i) Move hero right according to specification.
-	if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) sprite_move( avatar, +1, 0 );
+  bool out_right_bound = (next_position_x > w-1);
+  bool out_left_bound = (next_position_x < 0);
+
+  if (out_left_bound||out_right_bound) {
+    if (out_left_bound){
+      speed_x = 0;
+      sprite_move_to (avatar,1,avatar_initial_position_y);
+    }
+    if (out_right_bound){
+      speed_x = 0;
+      sprite_move_to (avatar,w-6,avatar_initial_position_y);
+    }
+  }
+  else{
+    //is on the floor
+    if (ay == avatar_initial_position_y) {
+      // up_key event is independent
+      if (key =='w') {
+        speed_y = INITIAL_VERTICAL_SPEED;
+      }
+
+      //not moving horizontally
+      if (speed_x == 0) {
+        //running towards left
+        if ( key == 'a' && ax > 1 ) speed_x = -WALKING_SPEED;
+        //walking towards right
+        if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = WALKING_SPEED;
+      }
+      //moving horizontally
+      else{
+        //walking towards right at walking speed
+        if(speed_x == WALKING_SPEED){
+          if ( key == 'a' && ax > 1 ) speed_x = 0;
+          if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = RUNNING_SPEED;
+        }
+        //walking towards left at walking speed
+        if(speed_x == -WALKING_SPEED){
+          if ( key == 'a' && ax > 1 ) speed_x = -RUNNING_SPEED;
+          if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = 0;
+        }
+        //running towards right at running speed
+        if(speed_x == RUNNING_SPEED){
+          if ( key == 'a' && ax > 1 ) speed_x = WALKING_SPEED;
+        }
+        //running towards left at running speed
+        if(speed_x == -RUNNING_SPEED){
+          if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = -WALKING_SPEED;
+        }
+      }
+    }
+  }
 
 
+
+
+
+
+
+
+
+
+  sprite_move(avatar,speed_x,speed_y);
   // Leave next line intact
 	clear_screen();
 
@@ -223,6 +308,9 @@ void cleanup(void){
 }
 
 int main(void){
+  WINDOW *menu_win;
+  keypad(menu_win, TRUE);
+
   setup_screen();
   setup();
   show_screen();
