@@ -1,0 +1,65 @@
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include <cab202_graphics.h>
+#include <cab202_sprites.h>
+#include <cab202_timers.h>
+
+//Configuration
+#define DELAY (10)
+#define AVATAR_WIDTH (5)
+#define AVATAR_HEIGHT (5)
+
+
+//Game state
+bool game_over = false;
+bool update_screen = true;
+bool display_dialog = false;
+
+
+//Status display
+time_t minutes = 0;
+time_t seconds = 0;
+int lives = 10;
+int level = 1;
+int score = 0;
+
+char* avatar_image =
+"┌(^o^)┐"
+"  | |   ";
+
+// Declare sprite
+sprite_id avatar;
+
+void setup(void){
+// draw the border
+
+// status top line
+draw_line(0,2,screen_width()-1,2,'-');
+// // status bottom line
+// draw_line(0,2,screen_width()-1,2,'-');
+// bottom line
+draw_line(0,screen_height()-1,screen_width()-1,screen_height()-1,'=');
+// left line
+draw_line(0,0,0,screen_height()-1,'|');
+// right line
+draw_line(screen_width()-1,0,screen_width()-1,screen_height()-1,'|');
+
+
+show_screen();
+
+// set up the avatar's position
+// standing on the floor of the cavern near the left wall
+int aw = AVATAR_WIDTH, ah = AVATAR_HEIGHT;
+int ax = aw+1;
+int ay = (screen_height()-ah-1);
+avatar = sprite_create(ax,ay,aw,ah,avatar_image);
+
+//draw the avatar
+sprite_draw(avatar);
+
+show_screen();
+
+
+
+}
