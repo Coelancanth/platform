@@ -34,6 +34,7 @@ int avatar_initial_position_x = 0;
 
 //Game state
 bool game_over = false;
+bool new_game = false;
 bool update_screen = true;
 
 
@@ -70,7 +71,7 @@ char* exit_door_image =
 "|    |"
 "|    |";
 
-char* monster_image =
+char* l1_monster_image =
 // "___O   "
 // "   |   "
 // "   |   "
@@ -91,6 +92,50 @@ char* debug_msg_image_b =
 char* level1_platform_image =
 "-----------------------------------------------------------";
 
+char* lv2_low_p_image =
+"-----------------------------------------------------------";
+char* lv2_high_p_image =
+"-----------------------------";
+char* lv2_treasure_image =
+"$";
+char* lv2_monster_image =
+" | "
+"/ \\";
+
+char* lv3_p_image =
+"-------------------------------------------------------------------";
+char* lv3_high_p_image =
+"------------";
+char* lv3_barrier_image =
+"                                                                               ";
+char* lv3_treasure_image =
+"$";
+char* lv4_p_image =
+"-----------------------------------------------------------------------------------------";
+char* lv4_barrier_image =
+"[]"
+"[]"
+"[]"
+"[]"
+"[]"
+"[]"
+"[]"
+"[]"
+"[]";
+char* lv4_key_image =
+"O-*";
+char* lv5_p_image =
+"-----------------------------------------------------------------------------------------";
+char* lv5_monster_image =
+"/''\\"
+"\\_/";
+char* lv5_barrier_image =
+"              ";
+char* lv5_key_image =
+"O-*";
+char* lv5_treasure_image =
+"$";
+
 
 
 
@@ -99,12 +144,29 @@ sprite_id avatar;
 //no sprite of floor, decide whether on the floor by testing avatar's height
 // sprite_id floor;
 //and thus platform_spirte may be discarded as well
-sprite_id platform_level1;
-sprite_id monster;
-sprite_id treasure;
-sprite_id exit_door;
-sprite_id key;
-sprite_id level1_platform;
+
+sprite_id exit_door;//lv2 and lv1
+sprite_id lv1_platform;
+sprite_id lv1_monster;
+sprite_id lv2_low_p;
+sprite_id lv2_high_p;
+sprite_id lv2_monster;
+sprite_id lv2_treasure;
+sprite_id lv3_p;
+sprite_id lv3_high_p;
+sprite_id lv3_exit;
+sprite_id lv3_barrier;
+sprite_id lv3_treasure;
+sprite_id lv4_p;
+sprite_id lv4_barrier;
+sprite_id lv4_key;
+sprite_id lv5_platform;
+sprite_id lv5_monster;
+sprite_id lv5_barrier;
+sprite_id lv5_key;
+sprite_id lv5_treasure;
+
+
 
 
 void debug_message_a(){
@@ -150,6 +212,13 @@ void debug_message_b(){
 //   }
 // }
 
+void draw_borders(){
+  draw_line(0,2,screen_width()-1,2,'-');
+  draw_line(0,screen_height()-1,screen_width()-1,screen_height()-1,'=');
+  draw_line(0,0,0,screen_height()-1,'|');
+  draw_line(screen_width()-1,0,screen_width()-1,screen_height()-1,'|');
+}
+
 
 
 
@@ -172,8 +241,7 @@ avatar_initial_position_y = ay;
 avatar_initial_position_x = ax;
 avatar = sprite_create(ax,ay,aw,ah,avatar_image);
 
-sprite_draw(avatar);
-show_screen();
+//sprite_draw(avatar);
 
 
 //set up exit_door's position, this is level1's position
@@ -182,34 +250,91 @@ int ew = EXIT_DOOR_WIDTH, eh = EXIT_DOOR_HEIGHT;
 int ex = (screen_width()-ew-1);
 int ey = (screen_height()-eh-1);
 exit_door = sprite_create(ex,ey,ew,eh,exit_door_image);
-sprite_draw(exit_door);
-show_screen();
+//sprite_draw(exit_door);
 
 //set up monster
-int mw = MONSTER_WIDTH, mh = MONSTER_HEIGHT;
-int mx = (screen_width()-mw-1);
-int my = (screen_height()-mh-1);
-monster = sprite_create(mx,my,mw,mh,monster_image);
-sprite_draw(monster);
-show_screen();
-
-int width = screen_width() / 4;
-draw_formatted(2, 1, "* Time: %02d:%02d", minutes, seconds);
-draw_formatted(width, 1, "* lives: %d", lives);
-draw_formatted(width * 2, 1, "* level: %d", level);
-draw_formatted(width *3, 1, "* score: %d", score);
-show_screen();
+int lv1_m_w = 5;
+int lv1_m_h = 5;
+int lv1_mx = (screen_width()-lv1_m_w-1);
+int lv1_my = (screen_height()-lv1_m_h-1);
+lv1_monster = sprite_create(lv1_mx,lv1_my,lv1_m_w,lv1_m_h,l1_monster_image);
+//sprite_draw(monster);
+//
+// //set up format
+// int width = screen_width() / 4;
+// draw_formatted(2, 1, "* Time: %02d:%02d", minutes, seconds);
+// draw_formatted(width, 1, "* lives: %d", lives);
+// draw_formatted(width * 2, 1, "* level: %d", level);
+// draw_formatted(width *3, 1, "* score: %d", score);
 
 //setup level1 platform
 int l1_platform_x = screen_width()/3;
 int l1_platform_y = screen_height() - 4*ah;
 int l1_platform_width = screen_width()/3-2;
 int l1_platform_height = level1_platform_height;
-level1_platform = sprite_create(l1_platform_x,l1_platform_y,l1_platform_width,l1_platform_height,level1_platform_image);
-sprite_draw(level1_platform);
-show_screen();
+lv1_platform = sprite_create(l1_platform_x,l1_platform_y,l1_platform_width,l1_platform_height,level1_platform_image);
+//sprite_draw(level1_platform);
+//show_screen();
+
+//setup level2 platform
+int lv2_low_x = screen_width()/3;
+int lv2_low_y = screen_height() - 4*ah;
+int lv2_low_h = 1;
+int lv2_low_w = screen_width()/3-2;
+lv2_low_p = sprite_create(lv2_low_x,lv2_low_y,lv2_low_w,lv2_low_h,lv2_low_p_image);
 
 
+int lv2_high_x =screen_width()/3;
+int lv2_high_y =screen_height() - 8*ah;
+int lv2_high_h = 1;
+int lv2_high_w =lv2_low_w/3;
+lv2_high_p = sprite_create(lv2_high_x,lv2_high_y,lv2_high_w,lv2_high_h,lv2_high_p_image);
+
+int lv2_m_x = screen_width()-10;
+int lv2_m_y = screen_height()-2;
+int lv2_m_w = 3;
+int lv2_m_h = 2;
+lv2_monster = sprite_create(lv2_m_x,lv2_m_y,lv2_m_w,lv2_m_h,lv2_monster_image);
+
+
+int lv2_t_x = screen_width()/3;
+int lv2_t_y = screen_height() - 8*ah-10;
+int lv2_t_w = 1;
+int lv2_t_h = 1;
+lv2_treasure = sprite_create(lv2_t_x,lv2_t_y,lv2_t_w,lv2_t_h,lv2_treasure_image);
+
+
+//setup level2 monster
+
+
+
+}
+
+
+void display_gameover(){
+  int w = screen_width() / 2;
+	int h = (screen_height() - 3) / 2;
+
+	draw_string(w - 9, h, "Game over");
+	draw_string(w - 9, h + 1, "Play again (y/n): ");
+	show_screen();
+
+	char key = wait_char();
+	if ( key == 'y') {
+
+		game_over = false;
+		new_game = true;
+		score = 0;
+		minutes = 0;
+		seconds = 0;
+		level = 1;
+		lives = 10;
+		delay_count = 0;
+	} else {
+		game_over = true;
+
+	}
+	return;
 }
 
 
@@ -281,6 +406,14 @@ void platform_mechanics(){
 
 }
 
+void l1_process(){
+
+}
+
+
+
+
+
 void process(){
   int w = screen_width(), h = screen_height(), ch = '*';
 
@@ -310,11 +443,6 @@ void process(){
   bool out_right_bound = (next_position_x > w-1);
   bool out_left_bound = (next_position_x < 0);
 
-  sprite_id platform = platform_generator(level);
-  sprite_id monster  = monster_generator(level);
-  sprite_id barrier  = barrier_generator(level);
-  sprite_id puzzle   = puzzle_generator(level);
-  sprite_id treasure = treasure_generator(level);
 
 
 
@@ -325,10 +453,38 @@ void process(){
   //but now only consider floor_bottom
   bool out_floor_bound = (next_position_y > (h-sprite_height(avatar)/2-1));
   bool out_ceiling_bound = (next_position_y < sprite_height(avatar)/2+3);
-  bool collision_with_exit = is_collided(avatar,exit_door);
-  bool collision_with_platform = is_collided(avatar,platform);
 
-  if (out_left_bound||out_right_bound||collision_with_exit||collision_with_l1_platform) {
+
+  if (level == 1) {
+    bool collision_with_exit = is_collided(avatar,exit_door);
+    bool cond1 = is_collided(avatar,lv1_platform);
+    bool cond2 = sprite_y(avatar)-sprite_height(avatar)/2<sprite_y(lv1_platform);
+    bool cond3 = sprite_y(avatar)+sprite_height(avatar)/2>sprite_y(lv1_platform);
+
+
+    bool collision_with_platform_top = cond1&&cond2;
+    bool collision_with_platform_bottom = cond1&&cond3;
+    bool collision_with_monster = is_collided(avatar,lv1_monster);
+
+    if (collision_with_monster) {
+      lives --;
+      new_game = true;
+    }
+    clear_screen();
+    sprite_draw(exit_door);
+    sprite_draw(lv1_platform);
+    sprite_draw(lv1_monster);
+
+
+  }
+
+
+
+
+
+
+
+  if (out_left_bound||out_right_bound) {
     if (out_left_bound){
       speed_x = 0;
       sprite_move_to (avatar,1,avatar_initial_position_y);
@@ -337,24 +493,24 @@ void process(){
       speed_x = 0;
       sprite_move_to (avatar,w-6,avatar_initial_position_y);
     }
-    if ( collision_with_exit){
-      exit_mechanics();
-    }
-    if (collision_with_platform) {
-      platform_mechanics();
-    }
-    if (collision_with_monster) {
-      monster_mechanics();
-    }
-    if(collision_with_barrier){
-      barrier_mechanchics();
-    }
-    if(has_puzzle){
-      puzzle_mechanics();
-    }
-    if (collision_with_treasure) {
-      treasure_mechanics();
-    }
+    // if ( collision_with_exit){
+    //   exit_mechanics();
+    // }
+    // if (collision_with_platform) {
+    //   platform_mechanics();
+    // }
+    // if (collision_with_monster) {
+    //   monster_mechanics();
+    // }
+    // if(collision_with_barrier){
+    //   barrier_mechanchics();
+    // }
+    // if(has_puzzle){
+    //   puzzle_mechanics();
+    // }
+    // if (collision_with_treasure) {
+    //   treasure_mechanics();
+    // }
 
 
 
@@ -430,7 +586,7 @@ void process(){
 
   sprite_move(avatar,speed_x,speed_y);
   // Leave next line intact
-	clear_screen();
+	//clear_screen();
 
 	// (b) Draw the border (process).
   draw_line(0,2,screen_width()-1,2,'-');
@@ -442,8 +598,6 @@ void process(){
 
 	// (l)	Draw the hero.
 	sprite_draw( avatar );
-  sprite_draw(exit_door);
-  sprite_draw(level1_platform);
 }
 
 
@@ -464,12 +618,30 @@ int main(void){
     clock();
     jump_timer();
 
+    if (new_game) {
+      setup();
+      new_level_time = 0;
+      speed_x =0;
+      speed_y =0;
+      clear_screen();
+      draw_borders();
+      display_status();
+      new_game = false;
+      show_screen();
+    }
+
     process();
 
     if (update_screen) {
       show_screen();
     }
     timer_pause(DELAY);
+
+    if(lives == 0){
+      clear_screen();
+      display_gameover();
+    }
+
   }
 
   cleanup();
