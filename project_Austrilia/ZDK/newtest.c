@@ -9,8 +9,8 @@
 
 //Configuration
 #define DELAY (10)
-#define AVATAR_WIDTH (5)
-#define AVATAR_HEIGHT (5)
+#define AVATAR_WIDTH (4)
+#define AVATAR_HEIGHT (3)
 #define EXIT_DOOR_WIDTH (6)
 #define EXIT_DOOR_HEIGHT (5)
 #define MONSTER_WIDTH (5)
@@ -19,8 +19,8 @@
 #define WALKING_SPEED (1)
 #define RUNNING_SPEED (2)
 //roughly 5 or 6 times its own height, overall time is around 1.5-2.0 seconds
-#define INITIAL_VERTICAL_SPEED (5)
-#define GRAVITATIONAL_ACCELERATION (3)
+#define INITIAL_VERTICAL_SPEED (-0.5)
+#define GRAVITATIONAL_ACCELERATION (0.5)
 
 
 float speed_x = 0;
@@ -38,6 +38,11 @@ bool update_screen = true;
 //Status display
 time_t minutes = 0;
 time_t seconds = 0;
+time_t delay_count = 0;
+time_t new_level_time = 0;
+time_t million_seconds = 0;
+time_t jump_delay_count = 0;
+bool timer_on = false;
 int lives = 10;
 int level = 1;
 int score = 0;
@@ -47,11 +52,9 @@ int score = 0;
 
 
 char* avatar_image =
-/**/	"  O  "
-/**/	"/ |\\ "
-/**/	"  |  "
-/**/	" / \\ "
-/**/	"/   \\";
+" O  "
+"/|\\ "
+"L L " ;
 
 
 char* msg_image =
@@ -77,8 +80,10 @@ char* monster_image =
 /**/	" Z   "
 /**/	"ZZZZZ";
 
-char* debug_msg_image =
-"this is a debug message";
+char* debug_msg_image_a =
+"this is A message";
+char* debug_msg_image_b =
+"this is B message";
 
 
 
@@ -94,11 +99,22 @@ sprite_id treasure;
 sprite_id exit_door;
 sprite_id key;
 
-void debug_message(){
+void debug_message_a(){
   int w = screen_width(), h = screen_height(), ch = '*';
   clear_screen();
-  int message_width = strlen(debug_msg_image) / 2;
-  sprite_id debug_msg = sprite_create( ( w - message_width ) / 2, ( h - 2 ) / 2, message_width, 2, debug_msg_image);
+  int message_width = strlen(debug_msg_image_a) / 2;
+  sprite_id debug_msg = sprite_create( ( w - message_width ) / 2, ( h - 2 ) / 2, message_width, 2, debug_msg_image_a);
+  sprite_draw(debug_msg);
+  show_screen();
+  wait_char();
+  return;
+}
+
+void debug_message_b(){
+  int w = screen_width(), h = screen_height(), ch = '*';
+  clear_screen();
+  int message_width = strlen(debug_msg_image_b) / 2;
+  sprite_id debug_msg = sprite_create( ( w - message_width ) / 2, ( h - 2 ) / 2, message_width, 2, debug_msg_image_b);
   sprite_draw(debug_msg);
   show_screen();
   wait_char();
@@ -160,6 +176,7 @@ void display_status(){
 	draw_formatted(width, 1, "* lives: %d", lives);
 	draw_formatted(width * 2, 1, "* level: %d", level);
 	draw_formatted(width *3, 1, "* score: %d", score);
+  draw_formatted(width *3, 15, "* jump_delay_count/100: %d", jump_delay_count/100);
   show_screen();
 }
 
@@ -169,6 +186,25 @@ void display_help(){
   draw_string(w,h,"arrow key for movemeng, 'l' for next level, 'q' for quit");
   show_screen();
 }
+
+void clock() {
+	delay_count++;
+	if (delay_count == 100) {
+		seconds++;
+		new_level_time++;
+		delay_count = 0;
+		if (seconds == 60) {
+			seconds = 0;
+			minutes++;
+		}
+	}
+}
+
+void jump_timer(){
+  if(timer_on) jump_delay_count++;
+  else return;
+}
+
 
 bool is_collided(sprite_id s1, sprite_id s2){
   bool collided = true;
@@ -205,14 +241,14 @@ void process(){
 	// (y) Test for end of game.
 	if ( key == 'q' ) {
 		clear_screen();
-		// int message_width = strlen(msg_image) / 2;
-		// sprite_id msg = sprite_create( ( w - message_width ) / 2, ( h - 2 ) / 2, message_width, 2, msg_image);
-		// sprite_draw(msg);
-		// show_screen();
-		// game_over = true;
-		// wait_char();
-		// return;
-    debug_message();
+		int message_width = strlen(msg_image) / 2;
+		sprite_id msg = sprite_create( ( w - message_width ) / 2, ( h - 2 ) / 2, message_width, 2, msg_image);
+		sprite_draw(msg);
+		show_screen();
+		game_over = true;
+		wait_char();
+		return;
+    //debug_message();
 	}
 
   //current position of avatar
@@ -224,6 +260,14 @@ void process(){
 
   bool out_right_bound = (next_position_x > w-1);
   bool out_left_bound = (next_position_x < 0);
+
+
+  //in mid-air
+  //none of keys have any effect
+  //5 cases, touches monster, exit, floor_bottom, platform_bottom, platform_top
+  //but now only consider floor_bottom
+  bool out_floor_bound = (next_position_y > (h-sprite_height(avatar)/2-1));
+  bool out_ceiling_bound = (next_position_y < sprite_height(avatar)/2+3);
 
   if (out_left_bound||out_right_bound) {
     if (out_left_bound){
@@ -240,6 +284,7 @@ void process(){
     if (ay == avatar_initial_position_y) {
       // up_key event is independent
       if (key =='w') {
+        timer_on = true;
         speed_y = INITIAL_VERTICAL_SPEED;
       }
 
@@ -272,16 +317,33 @@ void process(){
         }
       }
     }
+    //is in mid-air
+    else{
+      //none of keys have any effect
+      //5 cases, touches monster, exit, floor_bottom, platform_bottom, platform_top
+      //but now only consider floor_bottom
+      if ( out_floor_bound ) {
+        speed_y = 0;
+        sprite_move_to (avatar,sprite_x(avatar),avatar_initial_position_y);
+        timer_on = false;
+        jump_delay_count = 0;
+      }
+      if (out_ceiling_bound) {
+        sprite_move(avatar,0,1);
+        jump_delay_count = 0;
+        speed_y = 0;
+        debug_message_b();
+
+      }
+
+      //otherwise,normal situation
+      else{
+        speed_y += GRAVITATIONAL_ACCELERATION * jump_delay_count/100;
+      }
+
+    }
+
   }
-
-
-
-
-
-
-
-
-
 
   sprite_move(avatar,speed_x,speed_y);
   // Leave next line intact
@@ -293,11 +355,10 @@ void process(){
   draw_line(0,0,0,screen_height()-1,'|');
   draw_line(screen_width()-1,0,screen_width()-1,screen_height()-1,'|');
 
+  display_status();
+
 	// (l)	Draw the hero.
 	sprite_draw( avatar );
-
-
-
 
 }
 
@@ -316,6 +377,8 @@ int main(void){
   show_screen();
 
   while (!game_over) {
+    clock();
+    jump_timer();
 
 
     show_screen();
