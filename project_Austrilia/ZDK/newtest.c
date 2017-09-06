@@ -19,12 +19,14 @@
 #define WALKING_SPEED (1)
 #define RUNNING_SPEED (2)
 //roughly 5 or 6 times its own height, overall time is around 1.5-2.0 seconds
-#define INITIAL_VERTICAL_SPEED (-0.5)
+#define INITIAL_VERTICAL_SPEED (-1)
 #define GRAVITATIONAL_ACCELERATION (0.5)
 
-
+//parameters
 float speed_x = 0;
 float speed_y = 0;
+int level1_platform_width = 0;
+int level1_platform_height = 1;
 
 int avatar_initial_position_y = 0;
 int avatar_initial_position_x = 0;
@@ -86,6 +88,10 @@ char* debug_msg_image_b =
 "this is B message";
 
 
+char* level1_platform_image =
+"-----------------------------------------------------------";
+
+
 
 
 // Declare sprite
@@ -98,6 +104,8 @@ sprite_id monster;
 sprite_id treasure;
 sprite_id exit_door;
 sprite_id key;
+sprite_id level1_platform;
+
 
 void debug_message_a(){
   int w = screen_width(), h = screen_height(), ch = '*';
@@ -120,6 +128,31 @@ void debug_message_b(){
   wait_char();
   return;
 }
+
+// sprite_id platform_block(int x, int y){
+//   sprite_id block = sprite_create(x,y,1,1,"-");
+//   return block;
+// }
+//
+// void setup_platform_blocks(){
+//   number_blockes_level1 = screen_width()/3;
+//   level1_platform = calloc(number_blockes_level1,sizeof(sprite_id));
+//   for (size_t i = 0; i < number_blockes_level1; i++) {
+//     level1_platform[i] = platform_block((screen_width()/4)+i,screen_height()/3);
+//   }
+// }
+//
+// void level1_platform_process(){
+//   for (size_t i = 0; i < number_blockes_level1; i++) {
+//     if (level1_platform[i]!= NULL) {
+//       sprite_draw(level1_platform[i]);
+//     }
+//   }
+// }
+
+
+
+
 
 void setup(void){
 
@@ -167,6 +200,16 @@ draw_formatted(width * 2, 1, "* level: %d", level);
 draw_formatted(width *3, 1, "* score: %d", score);
 show_screen();
 
+//setup level1 platform
+int l1_platform_x = screen_width()/3;
+int l1_platform_y = screen_height() - 4*ah;
+int l1_platform_width = screen_width()/3-2;
+int l1_platform_height = level1_platform_height;
+level1_platform = sprite_create(l1_platform_x,l1_platform_y,l1_platform_width,l1_platform_height,level1_platform_image);
+sprite_draw(level1_platform);
+show_screen();
+
+
 }
 
 
@@ -177,7 +220,6 @@ void display_status(){
 	draw_formatted(width * 2, 1, "* level: %d", level);
 	draw_formatted(width *3, 1, "* score: %d", score);
   draw_formatted(width *3, 15, "* jump_delay_count/100: %d", jump_delay_count/100);
-  show_screen();
 }
 
 void display_help(){
@@ -228,9 +270,16 @@ bool is_collided(sprite_id s1, sprite_id s2){
 }
 
 
+void is_in_air(){
+  //none of keys have any effect
+  //5 cases, touches monster, exit, floor_bottom, platform_bottom, platform_top
+  //but now only consider floor_bottom
 
+}
 
+void platform_mechanics(){
 
+}
 
 void process(){
   int w = screen_width(), h = screen_height(), ch = '*';
@@ -261,6 +310,14 @@ void process(){
   bool out_right_bound = (next_position_x > w-1);
   bool out_left_bound = (next_position_x < 0);
 
+  sprite_id platform = platform_generator(level);
+  sprite_id monster  = monster_generator(level);
+  sprite_id barrier  = barrier_generator(level);
+  sprite_id puzzle   = puzzle_generator(level);
+  sprite_id treasure = treasure_generator(level);
+
+
+
 
   //in mid-air
   //none of keys have any effect
@@ -268,8 +325,10 @@ void process(){
   //but now only consider floor_bottom
   bool out_floor_bound = (next_position_y > (h-sprite_height(avatar)/2-1));
   bool out_ceiling_bound = (next_position_y < sprite_height(avatar)/2+3);
+  bool collision_with_exit = is_collided(avatar,exit_door);
+  bool collision_with_platform = is_collided(avatar,platform);
 
-  if (out_left_bound||out_right_bound) {
+  if (out_left_bound||out_right_bound||collision_with_exit||collision_with_l1_platform) {
     if (out_left_bound){
       speed_x = 0;
       sprite_move_to (avatar,1,avatar_initial_position_y);
@@ -278,44 +337,70 @@ void process(){
       speed_x = 0;
       sprite_move_to (avatar,w-6,avatar_initial_position_y);
     }
+    if ( collision_with_exit){
+      exit_mechanics();
+    }
+    if (collision_with_platform) {
+      platform_mechanics();
+    }
+    if (collision_with_monster) {
+      monster_mechanics();
+    }
+    if(collision_with_barrier){
+      barrier_mechanchics();
+    }
+    if(has_puzzle){
+      puzzle_mechanics();
+    }
+    if (collision_with_treasure) {
+      treasure_mechanics();
+    }
+
+
+
+
   }
   else{
     //is on the floor
     if (ay == avatar_initial_position_y) {
       // up_key event is independent
-      if (key =='w') {
+      if (key =='w') {//redandunt codes
         timer_on = true;
-        speed_y = INITIAL_VERTICAL_SPEED;
+        speed_y = INITIAL_VERTICAL_SPEED + GRAVITATIONAL_ACCELERATION * jump_delay_count/100;
+
       }
 
-      //not moving horizontally
-      if (speed_x == 0) {
-        //running towards left
-        if ( key == 'a' && ax > 1 ) speed_x = -WALKING_SPEED;
-        //walking towards right
-        if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = WALKING_SPEED;
-      }
-      //moving horizontally
-      else{
-        //walking towards right at walking speed
-        if(speed_x == WALKING_SPEED){
-          if ( key == 'a' && ax > 1 ) speed_x = 0;
-          if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = RUNNING_SPEED;
+        //not moving horizontally
+        if (speed_x == 0) {
+          //running towards left
+          if ( key == 'a' && ax > 1 ) speed_x = -WALKING_SPEED;
+          //walking towards right
+          if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = WALKING_SPEED;
         }
-        //walking towards left at walking speed
-        if(speed_x == -WALKING_SPEED){
-          if ( key == 'a' && ax > 1 ) speed_x = -RUNNING_SPEED;
-          if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = 0;
+        //moving horizontally
+        else{
+          //walking towards right at walking speed
+          if(speed_x == WALKING_SPEED){
+            if ( key == 'a' && ax > 1 ) speed_x = 0;
+            if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = RUNNING_SPEED;
+          }
+          //walking towards left at walking speed
+          if(speed_x == -WALKING_SPEED){
+            if ( key == 'a' && ax > 1 ) speed_x = -RUNNING_SPEED;
+            if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = 0;
+          }
+          //running towards right at running speed
+          if(speed_x == RUNNING_SPEED){
+            if ( key == 'a' && ax > 1 ) speed_x = WALKING_SPEED;
+          }
+          //running towards left at running speed
+          if(speed_x == -RUNNING_SPEED){
+            if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = -WALKING_SPEED;
+          }
         }
-        //running towards right at running speed
-        if(speed_x == RUNNING_SPEED){
-          if ( key == 'a' && ax > 1 ) speed_x = WALKING_SPEED;
-        }
-        //running towards left at running speed
-        if(speed_x == -RUNNING_SPEED){
-          if ( key == 'd' && ax < w - sprite_width(avatar) - 1 ) speed_x = -WALKING_SPEED;
-        }
-      }
+
+
+
     }
     //is in mid-air
     else{
@@ -328,18 +413,16 @@ void process(){
         timer_on = false;
         jump_delay_count = 0;
       }
-      if (out_ceiling_bound) {
-        sprite_move(avatar,0,1);
-        jump_delay_count = 0;
-        speed_y = 0;
-        debug_message_b();
-
-      }
-
+      // if (out_ceiling_bound) {
+      //   sprite_move(avatar,0,1);
+      //   jump_delay_count = 0;
+      //   speed_y = 0;
+      // }
       //otherwise,normal situation
       else{
         speed_y += GRAVITATIONAL_ACCELERATION * jump_delay_count/100;
       }
+
 
     }
 
@@ -359,7 +442,8 @@ void process(){
 
 	// (l)	Draw the hero.
 	sprite_draw( avatar );
-
+  sprite_draw(exit_door);
+  sprite_draw(level1_platform);
 }
 
 
@@ -380,8 +464,6 @@ int main(void){
     clock();
     jump_timer();
 
-
-    show_screen();
     process();
 
     if (update_screen) {
