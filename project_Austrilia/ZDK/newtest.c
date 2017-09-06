@@ -16,8 +16,8 @@
 #define MONSTER_WIDTH (5)
 #define MONSTER_HEIGHT (5)
 //walking speed should be calibrated so that it takes ca. 5 sec from left to right
-#define WALKING_SPEED (1)
-#define RUNNING_SPEED (2)
+#define WALKING_SPEED (0.75)
+#define RUNNING_SPEED (1.5)
 //roughly 5 or 6 times its own height, overall time is around 1.5-2.0 seconds
 #define INITIAL_VERTICAL_SPEED (-1)
 #define GRAVITATIONAL_ACCELERATION (0.5)
@@ -373,25 +373,48 @@ void jump_timer(){
 }
 
 
-bool is_collided(sprite_id s1, sprite_id s2){
+// bool is_collided(sprite_id s1, sprite_id s2){
+//   bool collided = true;
+//
+//   int s1_top = round(sprite_y(s1));
+//   int s1_bottom = s1_top + sprite_height(s1);
+//   int s1_left = round(sprite_x(s1));
+//   int s1_right = s1_left + sprite_width(s1);
+//
+//   int s2_top = round(sprite_y(s2));
+//   int s2_bottom = s2_top + sprite_height(s2);
+//   int s2_left = round(sprite_x(s2));
+//   int s2_right = s2_left + sprite_width(s2);
+//
+//   if (s1_right<s2_left) {collided = false;}
+//   if (s1_bottom<s2_top) {collided = false;}
+//   if (s1_top>s2_bottom) {collided = false;}
+//   if (s1_left>s2_left) {collided = false;}
+//
+//   return collided;
+// }
+
+
+bool is_collided(sprite_id hero, sprite_id zombie){
   bool collided = true;
 
-  int s1_top = round(sprite_y(s1));
-  int s1_bottom = s1_top + sprite_height(s1);
-  int s1_left = round(sprite_x(s1));
-  int s1_right = s1_left + sprite_width(s1);
+  int hx = round(sprite_x(hero));
+	int hy = round(sprite_y(hero));
+	int hr = hx + sprite_width(hero) - 1;
+	int hb = hy + sprite_height(hero) - 1;
 
-  int s2_top = round(sprite_y(s2));
-  int s2_bottom = s2_top + sprite_height(s2);
-  int s2_left = round(sprite_x(s2));
-  int s2_right = s2_left + sprite_width(s2);
+	int zx = round(sprite_x(zombie));
+	int zy = round(sprite_y(zombie));
+	int zr = zx + sprite_width(zombie) - 1;
+	int zb = zy + sprite_height(zombie) - 1;
 
-  if (s1_right<s2_left) {collided = false;}
-  if (s1_bottom<s2_top) {collided = false;}
-  if (s1_top>s2_bottom) {collided = false;}
-  if (s1_left>s2_left) {collided = false;}
+	if (hr<zx) {collided = false;}
+	if (hb<zy) {collided = false;}
 
-  return collided;
+	if (zr<hx) {collided = false;}
+	if (zb<hy) {collided = false;}
+
+	return collided;
 }
 
 
@@ -406,9 +429,6 @@ void platform_mechanics(){
 
 }
 
-void l1_process(){
-
-}
 
 
 
@@ -453,36 +473,7 @@ void process(){
   //but now only consider floor_bottom
   bool out_floor_bound = (next_position_y > (h-sprite_height(avatar)/2-1));
   bool out_ceiling_bound = (next_position_y < sprite_height(avatar)/2+3);
-
-
-  if (level == 1) {
-    bool collision_with_exit = is_collided(avatar,exit_door);
-    bool cond1 = is_collided(avatar,lv1_platform);
-    bool cond2 = sprite_y(avatar)-sprite_height(avatar)/2<sprite_y(lv1_platform);
-    bool cond3 = sprite_y(avatar)+sprite_height(avatar)/2>sprite_y(lv1_platform);
-
-
-    bool collision_with_platform_top = cond1&&cond2;
-    bool collision_with_platform_bottom = cond1&&cond3;
-    bool collision_with_monster = is_collided(avatar,lv1_monster);
-
-    if (collision_with_monster) {
-      lives --;
-      new_game = true;
-    }
-    clear_screen();
-    sprite_draw(exit_door);
-    sprite_draw(lv1_platform);
-    sprite_draw(lv1_monster);
-
-
-  }
-
-
-
-
-
-
+  bool on_platform_top = false;
 
   if (out_left_bound||out_right_bound) {
     if (out_left_bound){
@@ -574,6 +565,15 @@ void process(){
       //   jump_delay_count = 0;
       //   speed_y = 0;
       // }
+      if (on_platform_top) {
+        timer_on = false;
+        jump_delay_count = 0;
+      }
+
+
+
+
+
       //otherwise,normal situation
       else{
         speed_y += GRAVITATIONAL_ACCELERATION * jump_delay_count/100;
@@ -583,6 +583,66 @@ void process(){
     }
 
   }
+
+
+  if (level == 1) {
+    bool collision_with_exit = is_collided(avatar,exit_door);
+    bool cond1 = is_collided(avatar,lv1_platform);
+    bool cond2 = sprite_y(avatar)-sprite_height(avatar)/2<sprite_y(lv1_platform);
+    bool cond3 = sprite_y(avatar)+sprite_height(avatar)/2>sprite_y(lv1_platform);
+    bool cond4 = cond1&&(!cond2)&&(!cond3);
+
+
+    bool collision_with_platform_top = cond1&&cond2;
+    bool collision_with_platform_bottom = cond1&&cond3;
+    bool collision_with_platform_horizontally = cond4;
+    bool collision_with_monster = is_collided(avatar,lv1_monster);
+
+    bool collision_with_platform = cond1;
+
+    if (collision_with_platform) {
+      debug_message_a();
+    }
+
+    if (collision_with_monster) {
+      lives --;
+      new_game = true;
+    }
+
+    if (collision_with_exit) {
+      //@TODO animation
+      score +=100;
+      //level++;
+    }
+    if (collision_with_platform_top) {
+      speed_y = 0;
+      on_platform_top = true;
+      score+=33;
+    }
+    if (collision_with_platform_bottom) {
+      speed_y = -speed_y;
+      score+=15;
+    }
+    if (collision_with_platform_horizontally) {
+      speed_x = 0;
+    }
+
+
+    clear_screen();
+    sprite_draw(exit_door);
+    sprite_draw(lv1_platform);
+    sprite_draw(lv1_monster);
+
+
+  }
+
+
+
+
+
+
+
+
 
   sprite_move(avatar,speed_x,speed_y);
   // Leave next line intact
