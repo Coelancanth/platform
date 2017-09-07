@@ -27,6 +27,7 @@ float speed_x = 0;
 float speed_y = 0;
 int level1_platform_width = 0;
 int level1_platform_height = 1;
+bool on_platform_top = false;
 
 int avatar_initial_position_y = 0;
 int avatar_initial_position_x = 0;
@@ -90,12 +91,12 @@ char* debug_msg_image_b =
 
 
 char* level1_platform_image =
-"-----------------------------------------------------------";
+"===========================================================";
 
 char* lv2_low_p_image =
-"-----------------------------------------------------------";
+"===========================================================";
 char* lv2_high_p_image =
-"-----------------------------";
+"==============================";
 char* lv2_treasure_image =
 "$";
 char* lv2_monster_image =
@@ -103,7 +104,7 @@ char* lv2_monster_image =
 "/ \\";
 
 char* lv3_p_image =
-"-------------------------------------------------------------------";
+"===================================================================";
 char* lv3_high_p_image =
 "------------";
 char* lv3_barrier_image =
@@ -111,7 +112,7 @@ char* lv3_barrier_image =
 char* lv3_treasure_image =
 "$";
 char* lv4_p_image =
-"-----------------------------------------------------------------------------------------";
+"=========================================================================================";
 char* lv4_barrier_image =
 "[]"
 "[]"
@@ -125,7 +126,7 @@ char* lv4_barrier_image =
 char* lv4_key_image =
 "O-*";
 char* lv5_p_image =
-"-----------------------------------------------------------------------------------------";
+"=========================================================================================";
 char* lv5_monster_image =
 "/''\\"
 "\\_/";
@@ -473,7 +474,7 @@ void process(){
   //but now only consider floor_bottom
   bool out_floor_bound = (next_position_y > (h-sprite_height(avatar)/2-1));
   bool out_ceiling_bound = (next_position_y < sprite_height(avatar)/2+3);
-  bool on_platform_top = false;
+
 
   if (out_left_bound||out_right_bound) {
     if (out_left_bound){
@@ -508,8 +509,8 @@ void process(){
 
   }
   else{
-    //is on the floor
-    if (ay == avatar_initial_position_y) {
+    //is on the floor or on the platform
+    if (ay == avatar_initial_position_y||on_platform_top==true) {
       // up_key event is independent
       if (key =='w') {//redandunt codes
         timer_on = true;
@@ -566,8 +567,7 @@ void process(){
       //   speed_y = 0;
       // }
       if (on_platform_top) {
-        timer_on = false;
-        jump_delay_count = 0;
+
       }
 
 
@@ -587,22 +587,31 @@ void process(){
 
   if (level == 1) {
     bool collision_with_exit = is_collided(avatar,exit_door);
-    bool cond1 = is_collided(avatar,lv1_platform);
-    bool cond2 = sprite_y(avatar)-sprite_height(avatar)/2<sprite_y(lv1_platform);
-    bool cond3 = sprite_y(avatar)+sprite_height(avatar)/2>sprite_y(lv1_platform);
-    bool cond4 = cond1&&(!cond2)&&(!cond3);
-
-
-    bool collision_with_platform_top = cond1&&cond2;
-    bool collision_with_platform_bottom = cond1&&cond3;
-    bool collision_with_platform_horizontally = cond4;
+    // bool cond1 = is_collided(avatar,lv1_platform);
+    // bool cond2 = (sprite_y(avatar)-sprite_y(lv1_platform))>sprite_height(avatar);
+    // bool cond3 = sprite_y(avatar)>sprite_y(lv1_platform);
+    // bool cond4 = cond1&&(!cond2)&&(!cond3);
+    //
+    //
+    // bool collision_with_platform_top = cond1&&cond2;
+    // bool collision_with_platform_bottom = cond1&&cond3;
+    // //bool collision_with_platform_horizontally = cond4;
     bool collision_with_monster = is_collided(avatar,lv1_monster);
 
-    bool collision_with_platform = cond1;
+    bool collision_with_platform = is_collided(avatar,lv1_platform);
 
-    if (collision_with_platform) {
-      debug_message_a();
-    }
+
+    //use collision when its real collision, here we will use bound test as above
+    //bool collision_with_platform = is_collided(avatar,lv1_platform);
+    bool in_platform_range = sprite_x(avatar)>sprite_x(lv1_platform) && sprite_x(avatar)<sprite_x(lv1_platform)+sprite_width(lv1_platform)-sprite_width(avatar);
+    bool out_platform_up_bound = (next_position_y < sprite_y(lv1_platform));
+    bool out_platform_down_bound = (next_position_y > (sprite_y(lv1_platform)-sprite_height(avatar)));
+
+    bool collision_from_above = out_platform_down_bound && in_platform_range;
+    bool collision_from_below = out_platform_up_bound && in_platform_range;
+
+
+
 
     if (collision_with_monster) {
       lives --;
@@ -614,18 +623,58 @@ void process(){
       score +=100;
       //level++;
     }
-    if (collision_with_platform_top) {
+    // if (collision_with_platform_top) {
+    //   speed_y = 0;
+    //   on_platform_top = true;
+    //   score-=1;
+    // }
+    // if (collision_with_platform_bottom) {
+    //   speed_y = -speed_y;
+    //   sprite_move(avatar,0,1);
+    //   score+=1;
+    // }
+    // if (collision_with_platform_horizontally) {
+    //   speed_x = 0;
+    // }
+
+    // if (collision_with_platform) {
+    //   if (speed_y > 0 ) {//on top
+    //     on_platform_top = true;
+    //     sprite_move_to(avatar,sprite_x(avatar),sprite_y(lv1_platform)-1-sprite_height(avatar) )
+    //
+    //     speed_y = 0;
+    //     score -=1;
+    //   }
+    //   if (speed_y < 0&&!on_platform_top) {//on bottom
+    //       speed_y = -speed_y;
+    //       sprite_move(avatar,0,1);
+    //       score+=1;
+    //   }
+    //   if (speed_y<0 &&on_platform_top) {
+    //     jump_delay_count = 0;
+    //     speed_y = INITIAL_VERTICAL_SPEED + GRAVITATIONAL_ACCELERATION * jump_delay_count/100;
+    //   }
+    //
+    //
+    //
+    //
+    // }else{
+    //   on_platform_top = false;
+    // }
+
+
+    if (collision_from_above) {
       speed_y = 0;
       on_platform_top = true;
-      score+=33;
+      sprite_move(avatar,0,-1);
+      score +=1;
     }
-    if (collision_with_platform_bottom) {
+
+    if (collision_from_below) {
       speed_y = -speed_y;
-      score+=15;
+      score -=1;
     }
-    if (collision_with_platform_horizontally) {
-      speed_x = 0;
-    }
+
 
 
     clear_screen();
